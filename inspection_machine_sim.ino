@@ -1,4 +1,5 @@
-// 検査機シミュレータ
+// 搬送検査機シミュレータ（Arduino版）
+// Wokwi上での動作を想定
 
 // ピン定義
 #define SENSOR_PIN  A0  // 光センサー（ワーク検知）
@@ -22,21 +23,24 @@ int ng_dimension_minus = 0;
 int ng_scratch         = 0;
 int ng_transfer        = 0;
 
+// 検査するワーク数
+int work_num = 0;
+bool started = false;
+
 void setup() {
     Serial.begin(9600);
     pinMode(LED_OK, OUTPUT);
     pinMode(LED_NG, OUTPUT);
 
-    Serial.println("=== 検査機シミュレータ ===");
+    Serial.println("=== 搬送検査機シミュレータ ===");
     Serial.println("※画像検査自動機の動作をシミュレートします");
     Serial.println("");
     Serial.print("公差設定 → 上限(max):");
     Serial.print(tol_max);
     Serial.print(" 下限(min):");
     Serial.println(tol_min);
-    Serial.println("計測値をシリアルモニタから入力してください");
-    Serial.println("（例：10.02）");
-    Serial.println("----------------------------");
+    Serial.println("");
+    Serial.println("検査するワーク数を入力してください：");
 }
 
 void led_ok(void) {
@@ -78,23 +82,10 @@ void show_summary(void) {
     Serial.println("===========================");
 }
 
-void loop() {
-    // 計測値の入力待ち
-    if (Serial.available() == 0) return;
-
-    String input = Serial.readStringUntil('\n');
-    input.trim();
-
-    // 終了コマンド
-    if (input == "end") {
-        show_summary();
-        while (1); // 停止
-        return;
-    }
-
+void process_work(int no) {
     total++;
     Serial.println("");
-    Serial.print("[ワーク "); Serial.print(total); Serial.println("]");
+    Serial.print("[ワーク "); Serial.print(no); Serial.println("]");
 
     // 供給部センサー
     Serial.print("  供給部　　：");
@@ -103,7 +94,6 @@ void loop() {
         Serial.println("ワークなし（センサー未検知）");
         led_ng();
         no_work++;
-        Serial.println("  次のワークの計測値を入力（終了はend）");
         return;
     }
     Serial.println("ワーク検知");
@@ -113,8 +103,8 @@ void loop() {
     Serial.println("  爪搬送　　：検査部へ移動中...");
     Serial.println("  検査部　　：位置確認OK");
 
-    // 計測値表示
-    double measured = input.toDouble();
+    // 計測値自動生成
+    double measured = random(990, 1010) / 100.0;
     Serial.print("  計測値　　：");
     Serial.println(measured);
 
@@ -127,7 +117,6 @@ void loop() {
         led_ng();
         ng++;
         ng_dimension_plus++;
-        Serial.println("  次のワークの計測値を入力（終了はend）");
         return;
     }
     if (measured < tol_min) {
@@ -137,7 +126,6 @@ void loop() {
         led_ng();
         ng++;
         ng_dimension_minus++;
-        Serial.println("  次のワークの計測値を入力（終了はend）");
         return;
     }
     Serial.print("OK（計測値:"); Serial.print(measured);
@@ -158,5 +146,34 @@ void loop() {
         ok++;
     }
 
-    Serial.println("  次のワークの計測値を入力（終了はend）");
+    delay(300); // 次のワークまで少し待つ
+}
+
+void loop() {
+    // ワーク数の入力待ち
+    if (!started) {
+        if (Serial.available() == 0) return;
+        String input = Serial.readStringUntil('\n');
+        input.trim();
+        work_num = input.toInt();
+
+        if (work_num < 1 || work_num > 100) {
+            Serial.println("1〜100で入力してください：");
+            return;
+        }
+
+        started = true;
+        Serial.println("\n--- 検査開始 ---");
+
+        // 指定した数だけ自動で処理
+        for (int i = 1; i <= work_num; i++) {
+            process_work(i);
+        }
+
+        // 集計表示
+        show_summary();
+
+        Serial.println("\n検査完了。再度検査するにはリセットしてください。");
+        while (1); // 停止
+    }
 }
