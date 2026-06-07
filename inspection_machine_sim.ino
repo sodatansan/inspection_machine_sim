@@ -1,5 +1,4 @@
-// 搬送検査機シミュレータ（Arduino版）
-// Wokwi上での動作を想定
+// 外観自動検査機シミュレータ
 
 // ピン定義
 #define SENSOR_PIN  A0  // 光センサー（ワーク検知）
@@ -32,7 +31,7 @@ void setup() {
     pinMode(LED_OK, OUTPUT);
     pinMode(LED_NG, OUTPUT);
 
-    Serial.println("=== 搬送検査機シミュレータ ===");
+    Serial.println("=== 外観自動検査機シミュレータ ===");
     Serial.println("※画像検査自動機の動作をシミュレートします");
     Serial.println("");
     Serial.print("公差設定 → 上限(max):");
